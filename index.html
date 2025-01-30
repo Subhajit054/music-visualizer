@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Visualizer with Lyrics</title>
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #4ecdc4;
+            --accent: #ffe66d;
+            --dark: #2d3436;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark), #1a1a1a);
+            color: white;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        .visualizer-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .lyrics-container {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            border-radius: 15px;
+            position: relative;
+            height: 100%;
+        }
+
+        .lyrics-box {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            right: 2rem;
+            text-align: center;
+        }
+
+        .lyric-line {
+            font-size: 1.8rem;
+            margin: 1rem 0;
+            opacity: 0.3;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .lyric-line.active {
+            opacity: 1;
+            transform: translateY(0);
+            color: white;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        .visualizer-bars {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .bar {
+            width: 10px;
+            background: var(--secondary);
+            transition: height 0.2s ease;
+        }
+
+        .song-title {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+
+        .gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="visualizer-container">
+            <div class="song-title" id="songTitle">Now Playing: Die With A Smile</div>
+            <div class="visualizer-bars" id="visualizer"></div>
+            <div class="gradient-overlay"></div>
+        </div>
+        
+        <div class="lyrics-container">
+            <div class="lyrics-box" id="lyricsBox"></div>
+            <div class="gradient-overlay"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="playBtn">▶ Play</button>
+        <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+    </div>
+
+    <audio id="audioPlayer">
+        <source src="audio/die-with-a-smile.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const lyrics = [
+            { text: "I see the storm is getting closer", start: 10, end: 14 },
+            { text: "But I can see it in your eyes", start: 14, end: 18 },
+            { text: "We're dancing in the pouring rain", start: 18, end: 22 },
+            { text: "Our hearts beating in time", start: 22, end: 26 },
+            { text: "If this world should stop turning", start: 26, end: 30 },
+            { text: "I'll keep you safe in these arms of mine", start: 30, end: 34 },
+            { text: "Let's go down in glory together", start: 34, end: 38 },
+            { text: "And die with a smile", start: 38, end: 42 }
+        ];
+
+        const audio = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const visualizer = document.getElementById('visualizer');
+        const ctx = new AudioContext();
+        const analyser = ctx.createAnalyser();
+        let source;
+
+        // Create visualizer bars
+        for (let i = 0; i < 64; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            visualizer.appendChild(bar);
+        }
+
+        // Audio setup
+        audio.addEventListener('play', () => {
+            if (!source) {
+                source = ctx.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(ctx.destination);
+                analyser.fftSize = 256;
+            }
+            animateBars();
+        });
+
+        function animateBars() {
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            const bars = document.getElementsByClassName('bar');
+            for (let i = 0; i < bars.length; i++) {
+                const height = dataArray[i] / 2;
+                bars[i].style.height = `${height}px`;
+                bars[i].style.background = `hsl(${height * 2}, 70%, 50%)`;
+            }
+
+            requestAnimationFrame(animateBars);
+        }
+
+        // Lyrics synchronization
+        audio.addEventListener('timeupdate', () => {
+            const currentTime = audio.currentTime;
+            lyrics.forEach((line, index) => {
+                const lyricElement = document.getElementById(`line-${index}`);
+                if (currentTime >= line.start && currentTime <= line.end) {
+                    lyricElement.classList.add('active');
+                } else {
+                    lyricElement.classList.remove('active');
+                }
+            });
+        });
+
+        // Initialize lyrics
+        lyrics.forEach((line, index) => {
+            const div = document.createElement('div');
+            div.className = 'lyric-line';
+            div.id = `line-${index}`;
+            div.textContent = line.text;
+            document.getElementById('lyricsBox').appendChild(div);
+        });
+
+        // Controls
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                playBtn.textContent = '⏸ Pause';
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶ Play';
+            }
+        });
+
+        document.getElementById('volume').addEventListener('input', (e) => {
+            audio.volume = e.target.value;
+        });
+
+        // Initialize audio context on user interaction
+        document.body.addEventListener('click', () => {
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+        }, { once: true });
+    </script>
+</body>
+</html>
