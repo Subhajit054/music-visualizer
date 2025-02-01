@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romantic Music Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff6b6b;
+            --secondary: #ff8e8e;
+            --accent: #ffe66d;
+            --dark: #2d3436;
+            --text: #fff0f5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: var(--text);
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Left Panel - Visualizer & Lyrics */
+        .left-panel {
+            position: relative;
+            background: linear-gradient(45deg, rgba(255,107,107,0.1), rgba(0,0,0,0.9)),
+                        url('images/romantic-bg.jpg') center/cover;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .visualizer-container {
+            flex-grow: 1;
+            position: relative;
+            padding: 20px;
+        }
+
+        .visualizer-bars {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 3px;
+            padding: 15px;
+            transform-origin: bottom;
+        }
+
+        .bar {
+            width: 24px;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 12px 12px 0 0;
+            transition: height 0.2s ease, opacity 0.3s ease;
+            opacity: 0.8;
+            box-shadow: 0 0 15px rgba(255,107,107,0.2);
+        }
+
+        .lyrics-container {
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .lyric-line {
+            font-size: 2rem;
+            font-family: 'Great Vibes', cursive;
+            color: var(--text);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+            text-shadow: 0 0 15px rgba(0,0,0,0.5);
+            margin: 1.5rem 0;
+        }
+
+        .lyric-line.active {
+            opacity: 1;
+            transform: translateY(0);
+            color: var(--accent);
+        }
+
+        /* Right Panel - Video */
+        .right-panel {
+            position: relative;
+            background: #000;
+        }
+
+        #mainVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: sepia(0.3) brightness(0.8);
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+            padding: 1.5rem;
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            z-index: 3;
+            backdrop-filter: blur(10px);
+        }
+
+        .play-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1.2rem 2.5rem;
+            border-radius: 35px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 25px rgba(255,107,107,0.3);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(255,107,107,0.5);
+        }
+
+        .progress-container {
+            flex-grow: 1;
+            position: relative;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        #progress {
+            width: 100%;
+            height: 100%;
+            appearance: none;
+            background: transparent;
+        }
+
+        #progress::-webkit-progress-bar {
+            background: transparent;
+        }
+
+        #progress::-webkit-progress-value {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 3px;
+            transition: width 0.2s ease;
+        }
+
+        .time-display {
+            font-size: 0.9rem;
+            color: var(--text);
+            min-width: 120px;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        #volume {
+            width: 100px;
+            height: 4px;
+            appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+
+        #volume::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Floating Hearts Animation */
+        .floating-hearts span {
+            position: absolute;
+            pointer-events: none;
+            animation: float 8s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .lyric-line {
+                font-size: 1.5rem;
+            }
+
+            .controls {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .play-btn {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="visualizer-container">
+                <div class="visualizer-bars" id="visualizer"></div>
+                <div class="lyrics-container" id="lyricsBox"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <video id="mainVideo" muted loop>
+                <source src="video/romantic-video.mp4" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="play-btn" id="playBtn">▶ Play</button>
+        <div class="progress-container">
+            <input type="range" id="progress" value="0" min="0" max="100" step="0.1">
+        </div>
+        <span class="time-display" id="timeDisplay">0:00 / 0:00</span>
+        <div class="volume-container">
+            <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="audioPlayer">
+        <source src="audio/song.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Initialize Audio Context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioElement = document.getElementById('audioPlayer');
+        const track = audioContext.createMediaElementSource(audioElement);
+        const analyser = audioContext.createAnalyser();
+        
+        // Connect audio nodes
+        track.connect(analyser);
+        analyser.connect(audioContext.destination);
+        analyser.fftSize = 256;
+
+        // Visualizer Setup
+        const visualizer = document.getElementById('visualizer');
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        // Create visualizer bars
+        for (let i = 0; i < 40; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            visualizer.appendChild(bar);
+        }
+        const bars = document.querySelectorAll('.bar');
+
+        // Lyrics Configuration (Fallback)
+        const lyrics = [
+            { text: "Ooh, I just woke up from a dream", start: 0, end: 5 },
+            { text: "Where we had to say goodbye", start: 5, end: 10 },
+            { text: "But our love will forever gleam", start: 10, end: 15 },
+            // Add more lyrics with proper timing
+        ];
+
+        // Initialize Lyrics
+        const lyricsBox = document.getElementById('lyricsBox');
+        lyrics.forEach((line, index) => {
+            const div = document.createElement('div');
+            div.className = 'lyric-line';
+            div.textContent = line.text;
+            div.dataset.start = line.start;
+            div.dataset.end = line.end;
+            lyricsBox.appendChild(div);
+        });
+
+        // Player Controls
+        const playBtn = document.getElementById('playBtn');
+        const progress = document.getElementById('progress');
+        const video = document.getElementById('mainVideo');
+
+        // Update Visualizer
+        function updateVisualizer() {
+            analyser.getByteFrequencyData(dataArray);
+            
+            bars.forEach((bar, i) => {
+                const value = dataArray[i] || 0;
+                const height = Math.max(10, value * 1.2);
+                bar.style.height = `${height}px`;
+                bar.style.opacity = Math.min(0.9, value / 255 + 0.2);
+            });
+            
+            requestAnimationFrame(updateVisualizer);
+        }
+
+        // Update Lyrics
+        function updateLyrics() {
+            const currentTime = audioElement.currentTime;
+            document.querySelectorAll('.lyric-line').forEach(line => {
+                const start = parseFloat(line.dataset.start);
+                const end = parseFloat(line.dataset.end);
+                line.classList.toggle('active', currentTime >= start && currentTime <= end);
+            });
+        }
+
+        // Time Display Formatter
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Event Listeners
+        audioElement.addEventListener('timeupdate', () => {
+            progress.value = (audioElement.currentTime / audioElement.duration) * 100 || 0;
+            document.getElementById('timeDisplay').textContent = 
+                `${formatTime(audioElement.currentTime)} / ${formatTime(audioElement.duration)}`;
+            updateLyrics();
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (audioElement.paused) {
+                audioElement.play();
+                video.play();
+                playBtn.textContent = '⏸ Pause';
+                updateVisualizer();
+            } else {
+                audioElement.pause();
+                video.pause();
+                playBtn.textContent = '▶ Play';
+            }
+        });
+
+        progress.addEventListener('input', (e) => {
+            const seekTime = (e.target.value / 100) * audioElement.duration;
+            audioElement.currentTime = seekTime;
+            video.currentTime = seekTime;
+        });
+
+        document.getElementById('volume').addEventListener('input', (e) => {
+            audioElement.volume = e.target.value;
+        });
+
+        // Initialize
+        document.addEventListener('click', () => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }, { once: true });
+
+        // Create floating hearts
+        function createHearts() {
+            const container = document.querySelector('.container');
+            for (let i = 0; i < 20; i++) {
+                const heart = document.createElement('span');
+                heart.innerHTML = '❤️';
+                heart.style.left = Math.random() * 100 + 'vw';
+                heart.style.animationDelay = Math.random() * 5 + 's';
+                heart.style.fontSize = Math.random() * 20 + 10 + 'px';
+                container.appendChild(heart);
+            }
+        }
+
+        createHearts();
+    </script>
+</body>
+</html>
