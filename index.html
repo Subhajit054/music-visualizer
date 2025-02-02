@@ -44,6 +44,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transform: scaleY(1); /* Fix flipped image */
         }
 
         .visualizer-container {
@@ -127,87 +128,13 @@
             backdrop-filter: blur(10px);
         }
 
-        .play-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 1.2rem 2.5rem;
-            border-radius: 35px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 25px rgba(255,107,107,0.3);
-        }
-
-        .play-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 30px rgba(255,107,107,0.5);
-        }
-
-        .progress-container {
-            flex-grow: 1;
-            position: relative;
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        #progress {
-            width: 100%;
-            height: 100%;
-            appearance: none;
-            background: transparent;
-        }
-
-        #progress::-webkit-progress-bar {
-            background: transparent;
-        }
-
-        #progress::-webkit-progress-value {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            border-radius: 3px;
-            transition: width 0.2s ease;
-        }
-
-        .time-display {
-            font-size: 0.9rem;
-            color: var(--text);
-            min-width: 120px;
-            text-align: center;
-            opacity: 0.8;
-        }
-
-        .volume-container {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-        }
-
-        #volume {
-            width: 100px;
-            height: 4px;
-            appearance: none;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-        }
-
-        #volume::-webkit-slider-thumb {
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
         /* Floating Hearts Animation */
         .floating-hearts span {
             position: absolute;
             pointer-events: none;
             animation: float 8s linear infinite;
             opacity: 0.7;
+            z-index: 1;
         }
 
         @keyframes float {
@@ -224,6 +151,35 @@
             }
         }
 
+        /* Particle Animation */
+        .particles span {
+            position: absolute;
+            pointer-events: none;
+            animation: particle 3s linear infinite;
+            opacity: 0.5;
+        }
+
+        @keyframes particle {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Glow Animation */
+        @keyframes glow {
+            0% { filter: drop-shadow(0 0 5px var(--primary)); }
+            50% { filter: drop-shadow(0 0 20px var(--primary)); }
+            100% { filter: drop-shadow(0 0 5px var(--primary)); }
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .container {
@@ -233,33 +189,30 @@
             .lyric-line {
                 font-size: 1.5rem;
             }
-
-            .controls {
-                padding: 1rem;
-                gap: 1rem;
-            }
-
-            .play-btn {
-                padding: 1rem 2rem;
-                font-size: 1rem;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Floating Elements -->
+        <div class="floating-hearts"></div>
+        <div class="particles"></div>
+
         <!-- Left Panel -->
         <div class="left-panel">
             <div class="visualizer-container">
                 <div class="visualizer-bars" id="visualizer"></div>
-                <div class="lyrics-container" id="lyricsBox"></div>
+                <div class="lyrics-container" id="lyricsBox">
+                    <div class="lyric-line active" id="subtitleText">Now Playing: Die With A Smile</div>
+                </div>
             </div>
         </div>
 
         <!-- Right Panel -->
         <div class="right-panel">
-            <video id="mainVideo" muted loop>
+            <video id="mainVideo" controls>
                 <source src="video/romantic-video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
             </video>
         </div>
     </div>
@@ -293,6 +246,10 @@
         analyser.connect(audioContext.destination);
         analyser.fftSize = 256;
 
+        // Video Element
+        const video = document.getElementById('mainVideo');
+        video.controls = false; // Hide native video controls
+
         // Visualizer Setup
         const visualizer = document.getElementById('visualizer');
         const bufferLength = analyser.frequencyBinCount;
@@ -306,29 +263,10 @@
         }
         const bars = document.querySelectorAll('.bar');
 
-        // Lyrics Configuration (Fallback)
-        const lyrics = [
-            { text: "Ooh, I just woke up from a dream", start: 0, end: 5 },
-            { text: "Where we had to say goodbye", start: 5, end: 10 },
-            { text: "But our love will forever gleam", start: 10, end: 15 },
-            // Add more lyrics with proper timing
-        ];
-
-        // Initialize Lyrics
-        const lyricsBox = document.getElementById('lyricsBox');
-        lyrics.forEach((line, index) => {
-            const div = document.createElement('div');
-            div.className = 'lyric-line';
-            div.textContent = line.text;
-            div.dataset.start = line.start;
-            div.dataset.end = line.end;
-            lyricsBox.appendChild(div);
-        });
-
         // Player Controls
         const playBtn = document.getElementById('playBtn');
         const progress = document.getElementById('progress');
-        const video = document.getElementById('mainVideo');
+        const subtitleText = document.getElementById('subtitleText');
 
         // Update Visualizer
         function updateVisualizer() {
@@ -344,16 +282,6 @@
             requestAnimationFrame(updateVisualizer);
         }
 
-        // Update Lyrics
-        function updateLyrics() {
-            const currentTime = audioElement.currentTime;
-            document.querySelectorAll('.lyric-line').forEach(line => {
-                const start = parseFloat(line.dataset.start);
-                const end = parseFloat(line.dataset.end);
-                line.classList.toggle('active', currentTime >= start && currentTime <= end);
-            });
-        }
-
         // Time Display Formatter
         function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -366,13 +294,15 @@
             progress.value = (audioElement.currentTime / audioElement.duration) * 100 || 0;
             document.getElementById('timeDisplay').textContent = 
                 `${formatTime(audioElement.currentTime)} / ${formatTime(audioElement.duration)}`;
-            updateLyrics();
+                
+            // Sync video with audio
+            video.currentTime = audioElement.currentTime;
         });
 
         playBtn.addEventListener('click', () => {
             if (audioElement.paused) {
                 audioElement.play();
-                video.play();
+                video.play().catch(() => {});
                 playBtn.textContent = '⏸ Pause';
                 updateVisualizer();
             } else {
@@ -390,18 +320,15 @@
 
         document.getElementById('volume').addEventListener('input', (e) => {
             audioElement.volume = e.target.value;
+            video.volume = e.target.value;
         });
 
-        // Initialize
-        document.addEventListener('click', () => {
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-        }, { once: true });
-
-        // Create floating hearts
-        function createHearts() {
-            const container = document.querySelector('.container');
+        // Create floating elements
+        function createFloatingElements() {
+            const container = document.querySelector('.floating-hearts');
+            const particles = document.querySelector('.particles');
+            
+            // Create hearts
             for (let i = 0; i < 20; i++) {
                 const heart = document.createElement('span');
                 heart.innerHTML = '❤️';
@@ -410,9 +337,26 @@
                 heart.style.fontSize = Math.random() * 20 + 10 + 'px';
                 container.appendChild(heart);
             }
+
+            // Create particles
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('span');
+                particle.innerHTML = '✨';
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                particle.style.fontSize = Math.random() * 10 + 5 + 'px';
+                particles.appendChild(particle);
+            }
         }
 
-        createHearts();
+        // Initialize
+        document.addEventListener('click', () => {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }, { once: true });
+
+        createFloatingElements();
     </script>
 </body>
 </html>
